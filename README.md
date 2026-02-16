@@ -14,6 +14,9 @@ The max for `max_guesses` is given only by your patience.
 Enter a 4-letter guess:
 ```
 
+Example full game with default settings below. Pretend the color feedback
+is like the NYT one because on an ANSI console (Vs GitHub Markdown) it is:
+
 ```python
 >>> from wrdl import Wrdl; Wrdl().play()
 [   ][   ][   ][   ][   ]
