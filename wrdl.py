@@ -56,7 +56,7 @@ class Wrdl:
                 self.__secret_word = force_starting_word
         if self.__secret_word is None:
             self.__secret_word = random.choice(self.__dictionary)
-        self.__auto_guess_model = [string.ascii_uppercase] * length
+        self.__auto_guess_model = [string.ascii_uppercase] * len(self.__secret_word)
         self.__guessed_letters = dict()
         self.__valid_guesses = list()
 
