@@ -52,18 +52,7 @@ class Wrdl:
             print("[   ]" * len(self.secret_word))
 
     def guess(self, word):
-        word = str(word)
-        if len(word) != len(self.secret_word):
-            raise self.InvalidGuess("Wrong length for a guess!")
-        if any(not char.isalpha() for char in word):
-            raise self.InvalidGuess("Guesses must be letters only.")
-        guess = word.upper()
-        if guess not in self.__dictionary:
-            raise self.InvalidGuess("Unrecognized word.")
-        if guess in self.__valid_guesses:
-            raise self.AlreadyGuessed("Already guessed!")
-
-        self.__valid_guesses.append(guess)
+        self.__valid_guesses.append(self._validate_guess(word))
         if not self.solved and len(self.__valid_guesses) >= self.max_guesses:
             raise self.OutOfGuesses("Better luck next time!")
         return self.solved
@@ -74,13 +63,17 @@ class Wrdl:
                 while not self.solved:
                     self.draw()
                     try:
-                        self.guess(input(f"Enter a {len(self.secret_word)}-letter guess: "))
+                        self.guess(
+                            input(f"Enter a {len(self.secret_word)}-letter guess: ")
+                        )
                     except (self.AlreadyGuessed, self.InvalidGuess) as e:
                         print(e)
                     except self.OutOfGuesses as e:
                         self.draw()
                         print(e)
-                        print(f"Answer: {self.ANSI_BOLD}{self.ANSI_RED}{self.secret_word}")
+                        print(
+                            f"Answer: {self.ANSI_BOLD}{self.ANSI_RED}{self.secret_word}"
+                        )
                         break
             except (EOFError, KeyboardInterrupt):
                 print("\nGame ended prematurely. Thanks for playing!")
@@ -91,18 +84,19 @@ class Wrdl:
 
     def read_dictionary(self, length, save=True):
         with open(f"dictionaries/{length}_letter_words.txt") as wordfile:
-            self.__dictionary = list(set(
-                word.upper().strip() for word in wordfile if len(word.strip()) == length
-            ))
+            self.__dictionary = list(
+                set(
+                    self._validate_guess(word, length=length, fail_silently=True)
+                    for word in wordfile
+                )
+            )
         if save:
             self.save_dictionary(length)
 
     def save_dictionary(self, length):
         if not self.__dictionary:
             return
-        with open(
-            f"dictionaries/{length}_letter_words.txt", "w"
-        ) as wordfile:
+        with open(f"dictionaries/{length}_letter_words.txt", "w") as wordfile:
             for word in sorted(self.__dictionary):
                 print(word, file=wordfile)
 
@@ -117,6 +111,23 @@ class Wrdl:
                 yield -1 if guess_letter_counts[letter] <= letter_counts[letter] else 0
             else:
                 yield 0
+
+    def _validate_guess(self, guess, length=None, fail_silently=False):
+        guess = str(guess).upper().strip()
+        try:
+            if len(guess) != (length or len(self.secret_word)):
+                raise self.InvalidGuess("Wrong length for a guess!")
+            if any(not char.isalpha() for char in guess):
+                raise self.InvalidGuess("Guesses must be letters only.")
+            if hasattr(self, "__dictionary"):
+                if guess not in self.__dictionary:
+                    raise self.InvalidGuess("Unrecognized word.")
+                if guess in self.__valid_guesses:
+                    raise self.AlreadyGuessed("Already guessed!")
+        except (self.InvalidGuess, self.AlreadyGuessed):
+            if not fail_silently:
+                raise
+        return guess
 
     @property
     def max_guesses(self):
