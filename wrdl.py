@@ -1,5 +1,6 @@
 import collections
 import random
+import string
 
 
 class Wrdl:
@@ -23,10 +24,13 @@ class Wrdl:
     class InvalidGuess(ValueError):
         pass
 
-    class OutOfGuesses(Exception):
+    class GameOver(RuntimeError):
         pass
 
     class NoSuchDictionary(OSError):
+        pass
+
+    class OutOfGuesses(RuntimeError):
         pass
 
     def __init__(self, length=5, max_guesses=6, force_starting_word=None):
@@ -46,12 +50,21 @@ class Wrdl:
                 self.__secret_word = random.choice(self.__dictionary)
         else:
             self.__secret_word = random.choice(self.__dictionary)
+        self.__auto_guess_model = [string.ascii_uppercase] * length
         self.__completed_games = 0
         self.__max_guesses = max(int(max_guesses), 1)
         self.__guessed_letters = dict()
         self.__scores = list()
         self.__streak = 0
         self.__valid_guesses = list()
+
+    def auto_guess(self, draw=True):
+        try:
+            self.enter_guess(
+                random.choice(self._plausible_words()), verbose=True, draw=draw
+            )
+        except self.GameOver as message:
+            print(message)
 
     def draw(self):
         for i, guess in enumerate(self.__valid_guesses):
@@ -75,6 +88,32 @@ class Wrdl:
             print()
         print()
 
+    def enter_guess(self, guess=None, verbose=False, draw=False):
+        try:
+            if guess is None:
+                self.guess(input(f"Enter a {len(self.secret_word)}-letter guess: "))
+            else:
+                self.guess(guess)
+            print()
+        except (self.AlreadyGuessed, self.InvalidGuess) as message:
+            print(message)
+        except self.OutOfGuesses as message:
+            self.you_lose(message)
+        except (EOFError, KeyboardInterrupt) as message:
+            self.you_quit()
+        else:
+            if self.solved:
+                self.you_win()
+            else:
+                if verbose:
+                    print(
+                        len(self._plausible_words()),
+                        "word possibilities remain after last guess.",
+                    )
+
+        if draw:
+            self.draw()
+
     def guess(self, word):
         self.__valid_guesses.append(self._validate_guess(word))
         if not self.solved and len(self.__valid_guesses) >= self.max_guesses:
@@ -83,35 +122,12 @@ class Wrdl:
 
     def play(self, console_mode=True):
         if console_mode:
-            try:
-                while not self.solved:
-                    self.draw()
-                    try:
-                        self.guess(
-                            input(f"Enter a {len(self.secret_word)}-letter guess: ")
-                        )
-                        print()
-                    except (self.AlreadyGuessed, self.InvalidGuess) as e:
-                        print(e)
-                    except self.OutOfGuesses as e:
-                        self.__streak = 0
-                        self.__completed_games += 1
-                        self.draw()
-                        print(e)
-                        print(
-                            f"Answer: {self.ANSI_BOLD}{self.ANSI_RED}{self.secret_word}"
-                        )
-                        break
-            except (EOFError, KeyboardInterrupt):
-                print("\nGame ended prematurely. Thanks for playing!")
-                self.__streak = 0
-            else:
-                if self.solved:
-                    self.__streak += 1
-                    self.__completed_games += 1
-                    self.__scores.append(len(self.__valid_guesses))
-                    self.draw()
-                    print(f"{self.ANSI_BOLD}{self.win_message}")
+            while not self.solved:
+                self.draw()
+                try:
+                    self.enter_guess()
+                except self.GameOver:
+                    break
 
     def read_dictionary(self, length, save=True):
         with open(f"dictionaries/{length}_letter_words.txt") as wordfile:
@@ -131,6 +147,40 @@ class Wrdl:
             for word in sorted(self.__dictionary):
                 print(word, file=wordfile)
 
+    def you_lose(self, message, draw=True):
+        self.__streak = 0
+        self.__completed_games += 1
+        if draw:
+            self.draw()
+        print(message)
+        print(f"Answer: {self.ANSI_BOLD}{self.ANSI_RED}{self.secret_word}")
+        raise self.GameOver(message)
+
+    def you_quit(self):
+        message = "Game ended prematurely. Thanks for playing!"
+        print()
+        print(message)
+        self.__streak = 0
+        raise self.GameOver(message)
+
+    def you_win(self, draw=True):
+        self.__streak += 1
+        self.__completed_games += 1
+        self.__scores.append(len(self.__valid_guesses))
+        if draw:
+            self.draw()
+        print(f"{self.ANSI_BOLD}{self.win_message}")
+
+    def _plausible_words(self):
+        return list(
+            word
+            for word in self.__dictionary
+            if all(
+                letter in self.__auto_guess_model[position]
+                for position, letter in enumerate(word)
+            )
+        )
+
     def _evaluate_guess(self, index=-1):
         letter_counts = collections.Counter(self.secret_word)
         guess_letter_counts = collections.defaultdict(int)
@@ -138,14 +188,25 @@ class Wrdl:
             guess_letter_counts[letter] += 1
             if self.secret_word[position] == letter:
                 self.__guessed_letters[letter] = 1
+                self.__auto_guess_model[position] = letter
             elif letter in self.secret_word:
-                if letter_counts[letter] > guess_letter_counts[letter]:
+                if letter_counts[letter] >= guess_letter_counts[letter]:
                     self.__guessed_letters[letter] = -1
                 else:
                     self.__guessed_letters[letter] = 0
             else:
                 self.__guessed_letters[letter] = 0
             yield self.__guessed_letters[letter]
+        possible_letters = "".join(
+            (
+                letter
+                for letter in string.ascii_uppercase
+                if self.__guessed_letters.get(letter) != 0
+            )
+        )
+        for i, letter_set in enumerate(self.__auto_guess_model):
+            if len(letter_set) > len(possible_letters):
+                self.__auto_guess_model[i] = possible_letters
 
     def _validate_guess(self, guess, length=None, fail_silently=False):
         guess = str(guess).upper().strip()
