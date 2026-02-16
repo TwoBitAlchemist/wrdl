@@ -3,6 +3,7 @@ import random
 
 
 class Wrdl:
+    ANSI_DARK_GRAY = "\033[1;30m"
     ANSI_GREEN = "\033[0;32m"
     ANSI_YELLOW = "\033[0;33m"
     ANSI_WHITE = "\033[1;37m"
@@ -50,6 +51,27 @@ class Wrdl:
         for _ in range(self.max_guesses - len(self.__valid_guesses)):
             print(self.ANSI_BOLD, end="")
             print("[   ]" * len(self.secret_word))
+        print()
+        self.draw_keyboard()
+
+    def draw_keyboard(self):
+        guessed_letters = set(
+            letter for guess in self.__valid_guesses for letter in guess
+        )
+        for i, row in enumerate(("QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM")):
+            print(self.ANSI_BOLD, end="")
+            print(" " * 3 * i, end="")
+            for letter in row:
+                if letter in guessed_letters:
+                    if letter in self.secret_word:
+                        marker = f" {self.ANSI_GREEN}"
+                    else:
+                        marker = f" {self.ANSI_DARK_GRAY}"
+                else:
+                    marker = " "
+                print(f"[{marker}{letter}{self.ANSI_WHITE} ]", end="")
+            print()
+        print()
 
     def guess(self, word):
         self.__valid_guesses.append(self._validate_guess(word))
@@ -66,6 +88,7 @@ class Wrdl:
                         self.guess(
                             input(f"Enter a {len(self.secret_word)}-letter guess: ")
                         )
+                        print()
                     except (self.AlreadyGuessed, self.InvalidGuess) as e:
                         print(e)
                     except self.OutOfGuesses as e:
