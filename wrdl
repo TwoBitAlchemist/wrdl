@@ -143,16 +143,17 @@ class Wrdl:
             except self.GameOver:
                 break
 
-    def read_dictionary(self, length, save=True):
-        with open(f"dictionaries/{length}_letter_words.txt") as wordfile:
+    def read_dictionary(self, length):
+        with open("dictionary.txt") as wordfile:
             self.__dictionary = list(
-                set(
-                    self._validate_guess(word, length=length, fail_silently=True)
-                    for word in wordfile
+                filter(
+                    None,
+                    set(
+                        self._validate_guess(word, length=length, fail_silently=True)
+                        for word in wordfile
+                    ),
                 )
             )
-        if save:
-            self.save_dictionary(length)
 
     def reset(self, force_starting_word=None):
         self.__secret_word = None
@@ -165,13 +166,6 @@ class Wrdl:
         self.__auto_guess_model = [string.ascii_uppercase] * len(self.__secret_word)
         self.__guessed_letters = dict()
         self.__valid_guesses = list()
-
-    def save_dictionary(self, length):
-        if not self.__dictionary:
-            return
-        with open(f"dictionaries/{length}_letter_words.txt", "w") as wordfile:
-            for word in sorted(self.__dictionary):
-                print(word, file=wordfile)
 
     def you_lose(self, message, draw=True):
         self.__streak = 0
@@ -263,7 +257,8 @@ class Wrdl:
         except (self.InvalidGuess, self.AlreadyGuessed):
             if not fail_silently:
                 raise
-        return guess
+        else:
+            return guess
 
     @property
     def completed_games(self):
