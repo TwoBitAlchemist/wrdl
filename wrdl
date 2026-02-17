@@ -1,3 +1,5 @@
+#! /usr/bin/python3
+import argparse
 import collections
 import random
 import string
@@ -333,3 +335,17 @@ class Wrdl:
                 return "Great."
             case 6:
                 return "Phew..."
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        prog="Wrdl",
+        description="A small Wordle clone that can vary the board size somewhat.",
+        epilog="Enjoy Wrdl! :)",
+    )
+    parser.add_argument("-l", "--length", default=5)
+    parser.add_argument("-m", "--max-guesses", default=6)
+    parser.add_argument("-i", "--interactive", action="store_true")
+    args = parser.parse_args()
+    game_engine = Wrdl(length=args.length, max_guesses=args.max_guesses)
+    game_engine.play(demo=not args.interactive)
