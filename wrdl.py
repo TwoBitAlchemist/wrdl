@@ -128,22 +128,25 @@ class Wrdl:
             raise self.OutOfGuesses("Better luck next time!")
         return self.solved
 
-    def play(self, demo=True):
+    def play(self, demo=True, simulations=1):
         if self.__valid_guesses:
             self.reset()
         if demo:
             print("Playing in demo mode.")
+        else:
+            simulations = 1
         self.draw()
-        while not self.solved:
-            try:
-                if demo:
-                    time.sleep(4)
-                    os.system("clear")
-                    self.auto_guess()
-                else:
-                    self.enter_guess()
-            except self.GameOver:
-                break
+        for iteration in range(simulations):
+            while not self.solved:
+                try:
+                    if demo:
+                        time.sleep(4)
+                        os.system("clear")
+                        self.auto_guess()
+                    else:
+                        self.enter_guess()
+                except self.GameOver:
+                    break
 
     def read_dictionary(self, length):
         with open("dictionary.txt") as wordfile:
@@ -343,6 +346,7 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--length", default=5)
     parser.add_argument("-m", "--max-guesses", default=6)
     parser.add_argument("-i", "--interactive", action="store_true")
+    parser.add_argument("-s", "--simulations", default=1)
     args = parser.parse_args()
     game_engine = Wrdl(length=args.length, max_guesses=args.max_guesses)
-    game_engine.play(demo=not args.interactive)
+    game_engine.play(demo=not args.interactive, simulations=int(arg.simulations))
