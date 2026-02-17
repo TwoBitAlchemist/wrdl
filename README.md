@@ -1,6 +1,5 @@
 ```
-└──╼ python3 wrdl --help
-usage: Wrdl [-h] [-l LENGTH] [-m MAX_GUESSES] [-i]
+usage: Wrdl [-h] [-l LENGTH] [-m MAX_GUESSES] [-d] [-s SIMULATIONS]
 
 A small Wordle clone that can vary the board size somewhat.
 
@@ -8,7 +7,8 @@ options:
   -h, --help            show this help message and exit
   -l, --length LENGTH
   -m, --max-guesses MAX_GUESSES
-  -i, --interactive
+  -d, --demo
+  -s, --simulations SIMULATIONS
 
 Enjoy Wrdl! :)
 ```
