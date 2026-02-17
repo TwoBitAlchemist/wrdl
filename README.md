@@ -12,3 +12,5 @@ options:
 
 Enjoy Wrdl! :)
 ```
+
+https://github.com/user-attachments/assets/7496f97f-48b2-4118-a60b-c77d33c609c4
