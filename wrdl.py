@@ -349,4 +349,4 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--simulations", default=1)
     args = parser.parse_args()
     game_engine = Wrdl(length=args.length, max_guesses=args.max_guesses)
-    game_engine.play(demo=not args.interactive, simulations=int(arg.simulations))
+    game_engine.play(demo=not args.interactive, simulations=int(args.simulations))
