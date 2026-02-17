@@ -55,7 +55,8 @@ class Wrdl:
     def auto_guess(self):
         try:
             self.enter_guess(
-                random.choice(self._plausible_words()), verbose=True,
+                random.choice(self._plausible_words()),
+                verbose=True,
             )
         except self.GameOver as message:
             print(message)
@@ -66,6 +67,11 @@ class Wrdl:
         self.play(demo=True)
 
     def draw(self):
+        os.system("clear")
+        print(
+            f"Playing Wrdl:\nYou have {self.max_guesses} guesses to find a "
+            f"{len(self.secret_word)}-letter word.\n"
+        )
         for i, guess in enumerate(self.__valid_guesses):
             print(self.ANSI_BOLD, end="")
             for grade, letter in zip(self._evaluate_guess(i), guess):
@@ -131,22 +137,26 @@ class Wrdl:
     def play(self, demo=True, simulations=1):
         if self.__valid_guesses:
             self.reset()
-        if demo:
-            print("Playing in demo mode.")
-        else:
-            simulations = 1
         self.draw()
-        for iteration in range(simulations):
+        for iteration in range(simulations if demo else 1):
             while not self.solved:
                 try:
                     if demo:
                         time.sleep(4)
-                        os.system("clear")
                         self.auto_guess()
                     else:
                         self.enter_guess()
                 except self.GameOver:
                     break
+        if not demo:
+            self.play_again()
+
+    def play_again(self):
+        again = input("Play again? (Y/n) - ").upper()
+        if again == "N":
+            print("Thanks for playing Wrdl!")
+        else:
+            self.play()
 
     def read_dictionary(self, length):
         with open("dictionary.txt") as wordfile:
