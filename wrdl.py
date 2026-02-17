@@ -52,10 +52,10 @@ class Wrdl:
         self.__streak = 0
         self.reset(force_starting_word)
 
-    def auto_guess(self, draw=True):
+    def auto_guess(self):
         try:
             self.enter_guess(
-                random.choice(self._plausible_words()), verbose=True, draw=draw
+                random.choice(self._plausible_words()), verbose=True,
             )
         except self.GameOver as message:
             print(message)
@@ -87,7 +87,7 @@ class Wrdl:
             print()
         print()
 
-    def enter_guess(self, guess=None, verbose=False, draw=False):
+    def enter_guess(self, guess=None, verbose=False):
         try:
             if guess is None:
                 self.guess(input(f"Enter a {len(self.secret_word)}-letter guess: "))
@@ -119,7 +119,7 @@ class Wrdl:
                             "No plausible words remain but the puzzle is unsolved."
                         )
 
-        if draw and not self.solved:
+        if not self.solved:
             self.draw()
 
     def guess(self, word):
@@ -172,11 +172,10 @@ class Wrdl:
         self.__guessed_letters = dict()
         self.__valid_guesses = list()
 
-    def you_lose(self, message, draw=True):
+    def you_lose(self, message):
         self.__streak = 0
         self.__completed_games += 1
-        if draw:
-            self.draw()
+        self.draw()
         print(message)
         print(f"Answer: {self.ANSI_BOLD}{self.ANSI_RED}{self.secret_word}")
         raise self.GameOver(message)
@@ -188,12 +187,11 @@ class Wrdl:
         self.__streak = 0
         raise self.GameOver(message)
 
-    def you_win(self, draw=True):
+    def you_win(self):
         self.__streak += 1
         self.__completed_games += 1
         self.__scores.append(len(self.__valid_guesses))
-        if draw:
-            self.draw()
+        self.draw()
         print(f"{self.ANSI_BOLD}{self.win_message}")
         self.stats()
 
