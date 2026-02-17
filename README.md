@@ -2,6 +2,21 @@ Configurable play Wordle. Must have dictionaries loaded at
 `dictionaries/n_letter_words.txt` to play `Wrdl(length=n)`.
 The max for `max_guesses` is given only by your patience.
 
+```bash
+└──╼ python3 wrdl --help
+usage: Wrdl [-h] [-l LENGTH] [-m MAX_GUESSES] [-i]
+
+A small Wordle clone that can vary the board size somewhat.
+
+options:
+  -h, --help            show this help message and exit
+  -l, --length LENGTH
+  -m, --max-guesses MAX_GUESSES
+  -i, --interactive
+
+Enjoy Wrdl! :)
+```
+
 ```python
 >>> from wrdl import Wrdl; Wrdl(length=4, max_guesses=2).play()
 [   ][   ][   ][   ]
