@@ -1,8 +1,4 @@
-Configurable play Wordle. Must have dictionaries loaded at
-`dictionaries/n_letter_words.txt` to play `Wrdl(length=n)`.
-The max for `max_guesses` is given only by your patience.
-
-```bash
+```
 └──╼ python3 wrdl --help
 usage: Wrdl [-h] [-l LENGTH] [-m MAX_GUESSES] [-i]
 
