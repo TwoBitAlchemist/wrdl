@@ -1,6 +1,7 @@
 import collections
 import random
 import string
+import time
 
 
 class Wrdl:
@@ -48,18 +49,6 @@ class Wrdl:
         self.__streak = 0
         self.reset(force_starting_word)
 
-    def reset(self, force_starting_word=None):
-        self.__secret_word = None
-        if force_starting_word is not None:
-            force_starting_word = force_starting_word.upper()
-            if force_starting_word in self.__dictionary:
-                self.__secret_word = force_starting_word
-        if self.__secret_word is None:
-            self.__secret_word = random.choice(self.__dictionary)
-        self.__auto_guess_model = [string.ascii_uppercase] * len(self.__secret_word)
-        self.__guessed_letters = dict()
-        self.__valid_guesses = list()
-
     def auto_guess(self, draw=True):
         try:
             self.enter_guess(
@@ -67,6 +56,11 @@ class Wrdl:
             )
         except self.GameOver as message:
             print(message)
+        if not self.solved:
+            print("Calculating my next guess...")
+
+    def demo(self):
+        self.play(demo=True)
 
     def draw(self):
         for i, guess in enumerate(self.__valid_guesses):
@@ -108,14 +102,19 @@ class Wrdl:
                 self.you_win()
             else:
                 if verbose:
-                    if len(self._plausible_words()) > 1:
+                    plausible_words = self._plausible_words()
+                    if len(plausible_words) > 1:
                         print(
-                            len(self._plausible_words()),
+                            len(plausible_words),
                             "word possibilities remain after last guess.",
                         )
-                    else:
+                    elif len(plausible_words) == 1:
                         print("The auto-guesser has determined the answer.")
                         print("One more auto guess will solve the puzzle.")
+                    else:
+                        raise RuntimeError(
+                            "No plausible words remain but " "the puzzle is unsolved."
+                        )
 
         if draw and not self.solved:
             self.draw()
@@ -126,14 +125,21 @@ class Wrdl:
             raise self.OutOfGuesses("Better luck next time!")
         return self.solved
 
-    def play(self, console_mode=True):
-        if console_mode:
-            while not self.solved:
-                self.draw()
-                try:
+    def play(self, demo=True):
+        if self.__valid_guesses:
+            self.reset()
+        if demo:
+            print("Playing in demo mode.")
+        self.draw()
+        while not self.solved:
+            try:
+                if demo:
+                    time.sleep(2)
+                    self.auto_guess()
+                else:
                     self.enter_guess()
-                except self.GameOver:
-                    break
+            except self.GameOver:
+                break
 
     def read_dictionary(self, length, save=True):
         with open(f"dictionaries/{length}_letter_words.txt") as wordfile:
@@ -145,6 +151,18 @@ class Wrdl:
             )
         if save:
             self.save_dictionary(length)
+
+    def reset(self, force_starting_word=None):
+        self.__secret_word = None
+        if force_starting_word is not None:
+            force_starting_word = force_starting_word.upper()
+            if force_starting_word in self.__dictionary:
+                self.__secret_word = force_starting_word
+        if self.__secret_word is None:
+            self.__secret_word = random.choice(self.__dictionary)
+        self.__auto_guess_model = [string.ascii_uppercase] * len(self.__secret_word)
+        self.__guessed_letters = dict()
+        self.__valid_guesses = list()
 
     def save_dictionary(self, length):
         if not self.__dictionary:
@@ -176,24 +194,7 @@ class Wrdl:
         if draw:
             self.draw()
         print(f"{self.ANSI_BOLD}{self.win_message}")
-
-    def _plausible_words(self):
-        return list(
-            word
-            for word in self.__dictionary
-            if all(
-                letter in self.__auto_guess_model[position]
-                for position, letter in enumerate(word)
-            )
-            and all(
-                misplaced_letter in word
-                for misplaced_letter in "".join(
-                    char
-                    for char in string.ascii_uppercase
-                    if self.__guessed_letters.get(char) == -1
-                )
-            )
-        )
+        self.stats()
 
     def _evaluate_guess(self, index=-1):
         letter_counts = collections.Counter(self.secret_word)
@@ -226,6 +227,24 @@ class Wrdl:
         for i, letter_set in enumerate(self.__auto_guess_model):
             if len(letter_set) > len(possible_letters):
                 self.__auto_guess_model[i] = possible_letters
+
+    def _plausible_words(self):
+        return list(
+            word
+            for word in self.__dictionary
+            if all(
+                letter in self.__auto_guess_model[position]
+                for position, letter in enumerate(word)
+            )
+            and all(
+                misplaced_letter in word
+                for misplaced_letter in "".join(
+                    char
+                    for char in string.ascii_uppercase
+                    if self.__guessed_letters.get(char) == -1
+                )
+            )
+        )
 
     def _validate_guess(self, guess, length=None, fail_silently=False):
         guess = str(guess).upper().strip()
