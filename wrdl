@@ -38,7 +38,7 @@ class Wrdl:
         pass
 
     def __init__(self, length=5, max_guesses=6, force_starting_word=None):
-        length = max(int(length), 1)
+        length = min(max(int(length), 2), 15)
         self.__dictionary = None
         try:
             self.read_dictionary(length)
