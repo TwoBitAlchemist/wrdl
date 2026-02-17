@@ -116,7 +116,7 @@ class Wrdl:
                         print("One more auto guess will solve the puzzle.")
                     else:
                         raise RuntimeError(
-                            "No plausible words remain but " "the puzzle is unsolved."
+                            "No plausible words remain but the puzzle is unsolved."
                         )
 
         if draw and not self.solved:
