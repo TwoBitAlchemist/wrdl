@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 import argparse
 import collections
+import os
 import random
 import string
 import time
@@ -136,7 +137,8 @@ class Wrdl:
         while not self.solved:
             try:
                 if demo:
-                    time.sleep(2)
+                    time.sleep(4)
+                    os.system("clear")
                     self.auto_guess()
                 else:
                     self.enter_guess()
