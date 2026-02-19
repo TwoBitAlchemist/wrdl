@@ -7,7 +7,6 @@ import random
 import string
 import time
 
-
 ANSI_DARK_GRAY = "\033[1;30m"
 ANSI_GREEN = "\033[0;32m"
 ANSI_YELLOW = "\033[0;33m"
@@ -81,8 +80,11 @@ class WrdlSolver:
     def __init__(self, length):
         self.dictionary = WrdlDictionary(length)
         self.__auto_guess_model = [string.ascii_uppercase] * self.dictionary.length
+        self.__letter_frequency = collections.Counter(
+            "".join(self.dictionary.lexicon)
+        )
 
-    def plausible_words(self):
+    def get_plausible_words(self, guessed_letters):
         words = tuple(
             word
             for word in self.dictionary.lexicon
@@ -95,7 +97,7 @@ class WrdlSolver:
                 for misplaced_letter in "".join(
                     char
                     for char in string.ascii_uppercase
-                    if self.__guessed_letters.get(char) == -1
+                    if guessed_letters.get(char) == -1
                 )
             )
         )
@@ -104,17 +106,30 @@ class WrdlSolver:
         else:
             return words
 
+    def generate_guess(self, guessed_letters, random=True, best=False):
+        if random and best:
+            raise ValueError("random and best are mutually exclusive arguments")
+        elif random:
+            return random.choice(self.get_plausible_words(guessed_letters))
+        elif best:
+            return sorted(
+                self.get_plausible_words(guessed_letters),
+                key=self.grade_letter_probability,
+                reverse=True,
+            )[0]
+        else:
+            raise ValueError("one of modes 'random' or 'best' is required")
+
+    def grade_letter_probability(self, word):
+        return sum(self.__letter_frequency[char] for char in word)
+
     def read_from_model(self, index):
         return self.__auto_guess_model[index]
 
     def remove_from_model(self, index, letter):
         self.update_model(
             index,
-            "".join(
-                char
-                for char in self.__auto_guess_model[index]
-                if char != letter
-            )
+            "".join(char for char in self.__auto_guess_model[index] if char != letter),
         )
 
     def update_model(self, index, plausible_letters):
@@ -210,18 +225,23 @@ class Wrdl:
         try:
             self.dictionary = WrdlDictionary(length)
         except OSError:
-            raise NoSuchDictionary(
-                f"No dictionary loaded for {length}-letter words."
-            )
+            raise NoSuchDictionary(f"No dictionary loaded for {length}-letter words.")
         self.__completed_games = 0
         self.__max_guesses = max(int(max_guesses), 1)
         self.__scores = list()
         self.__streak = 0
         self.checker = GuessChecker(length, force_starting_word)
+        self.auto_solver = self.checker.auto_solver
 
-    def auto_guess(self):
+    def auto_guess(self, best=True, random=False):
         try:
-            self.enter_guess(random.choice(self.checker.auto_solver.plausible_words()))
+            self.enter_guess(
+                self.auto_solver.generate_guess(
+                    self.guessed_letters,
+                    best=best,
+                    random=random,
+                )
+            )
         except GameOver as message:
             print(message)
 
@@ -262,7 +282,7 @@ class Wrdl:
                 guess = input(f"Enter a {self.dictionary.length}-letter guess: ")
             guess = self.checker.validate(guess)
             print()
-        except (AlreadyGuessed,InvalidGuess) as message:
+        except (AlreadyGuessed, InvalidGuess) as message:
             print(message)
         except OutOfGuesses as message:
             self.you_lose(message)
@@ -339,7 +359,10 @@ class Wrdl:
 
     @property
     def solved(self):
-        return bool(self.checker.valid_guesses) and sum(self.checker.evaluate()) == self.dictionary.length
+        return (
+            bool(self.checker.valid_guesses)
+            and sum(self.checker.evaluate()) == self.dictionary.length
+        )
 
     def stats(self):
         print("Total games played:", self.completed_games)
