@@ -25,7 +25,15 @@ class AlreadyGuessed(ValueError, WrdlException):
 
 
 class InvalidGuess(ValueError, WrdlException):
-    default_message = "Invalid guess."
+    default_message = "Unrecognized word."
+
+
+class InvalidGuessChars(InvalidGuess):
+    default_message = "Guesses must be letters only."
+
+
+class InvalidGuessLength(InvalidGuess):
+    default_message = "Wrong length for a guess!"
 
 
 class ImpossibleSolution(RuntimeError, WrdlException):
@@ -48,12 +56,6 @@ class WrdlDictionary:
     def __init__(self, length):
         self.__length = int(length)
 
-        def validate_word(word, checker=GuessChecker(self.__length)):
-            try:
-                return checker.validate(word)
-            except (AlreadyGuessed, InvalidGuess):
-                return None
-
         with open(
             Path(__file__).parent.joinpath("dictionary.txt").resolve()
         ) as wordfile:
@@ -61,7 +63,7 @@ class WrdlDictionary:
                 filter(
                     None,
                     set(
-                        validate_word(word, length=length, fail_silently=True)
+                        self.validate(word, fail_silently=True)
                         for word in wordfile
                     ),
                 )
@@ -73,7 +75,30 @@ class WrdlDictionary:
 
     @property
     def lexicon(self):
-        return tuple(self.__lexicon)
+        try:
+            return tuple(self.__lexicon)
+        except AttributeError:
+            return None
+
+    def validate(self, word, fail_silently=False):
+        word = str(word).upper().strip()
+
+        try:
+            if len(word) != self.length:
+                raise InvalidGuessLength()
+
+            if any(not char.isalpha() for char in word):
+                raise InvalidGuessChars()
+
+            if self.lexicon is not None and word not in self.lexicon:
+                raise InvalidGuess()
+        except InvalidGuess:
+            if fail_silently:
+                return None
+            else:
+                raise
+        else:
+            return word
 
 
 class WrdlSolver:
@@ -190,20 +215,9 @@ class GuessChecker:
         print(f"Answer: {ANSI_BOLD}{ANSI_RED}{self.__secret_word}")
 
     def validate(self, guess):
-        guess = str(guess).upper().strip()
-
-        if len(guess) != len(self.dictionary.length):
-            raise InvalidGuess("Wrong length for a guess!")
-
-        if any(not char.isalpha() for char in guess):
-            raise InvalidGuess("Guesses must be letters only.")
-
-        if self.dictionary.lexicon is not None:
-            if guess not in self.dictionary.lexicon:
-                raise InvalidGuess("Unrecognized word.")
-            if guess in self.__valid_guesses:
-                raise AlreadyGuessed()
-
+        guess = self.dictionary.validate(guess)
+        if guess in self.__valid_guesses:
+            raise AlreadyGuessed()
         self.__valid_guesses.append(guess)
         return guess
 
@@ -237,7 +251,7 @@ class Wrdl:
         try:
             self.enter_guess(
                 self.auto_solver.generate_guess(
-                    self.guessed_letters,
+                    self.checker.guessed_letters,
                     best=best,
                     random=random,
                 )
