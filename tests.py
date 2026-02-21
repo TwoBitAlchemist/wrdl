@@ -1,7 +1,7 @@
 import string
 import pytest
 
-from wrdl import Wrdl
+from wrdllib.wrdl import Wrdl
 from wrdllib.exceptions import (
     AlreadyGuessed,
     InvalidGuess,
@@ -122,7 +122,7 @@ def test_guess_handling():
     ), wordle.auto_solver.reveal_model()
 
 
-@pytest.mark.skip
+@pytest.mark.xfail
 def test_auto_solver():
     wordle = Wrdl(blind=True)
     wordle.auto_guess()

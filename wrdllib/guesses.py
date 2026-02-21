@@ -53,11 +53,22 @@ class WrdlSolver:
         else:
             raise ValueError("one of modes 'random_guess' or 'best_guess' is required")
 
-    def grade_guess(self, guess):
-        return sum(
-            GuessChecker.evaluate_single_guess(str(guess), possible_secret_word)
-            for possible_secret_word in self.dictionary.lexicon
-        )
+    @classmethod
+    def optimize_dictionary(cls, length):
+        def grade_guess(guess):
+            return sum(
+                GuessChecker.evaluate_single_guess(str(guess), possible_secret_word)
+                for possible_secret_word in dictionary.lexicon
+            )
+
+        dictionary = WrdlDictionary(length)
+        with open(f"optimized_dictionary_{length}.txt") as wordbank:
+            for word in sorted(
+                self.get_plausible_words(dict()),
+                key=grade_guess,
+                reverse=True,
+            ):
+                wordbank.write(f"{word}\n")
 
     def read_from_model(self, index):
         return self.__auto_guess_model[int(index)]

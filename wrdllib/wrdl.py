@@ -1,11 +1,9 @@
-#! /usr/bin/python3
-import argparse
 import collections
 import os
 import time
 
-from wrdllib.ansi import ANSI
-from wrdllib.exceptions import (
+from .ansi import ANSI
+from .exceptions import (
     AlreadyGuessed,
     GameOver,
     ImpossibleSolution,
@@ -13,7 +11,7 @@ from wrdllib.exceptions import (
     NoSuchDictionary,
     OutOfGuesses,
 )
-from wrdllib.guesses import GuessChecker
+from .guesses import GuessChecker
 
 
 class Wrdl:
@@ -191,18 +189,3 @@ class Wrdl:
     @property
     def streak(self):
         return self.__streak
-
-
-if __name__ == "__main__":  # pragma: no cover
-    parser = argparse.ArgumentParser(
-        prog="Wrdl",
-        description="A small Wordle clone that can vary the board size somewhat.",
-        epilog="Enjoy Wrdl! :)",
-    )
-    parser.add_argument("-l", "--length", default=5)
-    parser.add_argument("-m", "--max-guesses", default=6)
-    parser.add_argument("-d", "--demo", action="store_true")
-    parser.add_argument("-s", "--simulations", default=1)
-    args = parser.parse_args()
-    game_engine = Wrdl(length=args.length, max_guesses=args.max_guesses)
-    game_engine.play(demo=args.demo, simulations=int(args.simulations))
