@@ -2,239 +2,30 @@
 import argparse
 import collections
 import os
-from pathlib import Path
-import random
-import string
 import time
 
-from exceptions import *
-
-ANSI_DARK_GRAY = "\033[1;30m"
-ANSI_GREEN = "\033[0;32m"
-ANSI_YELLOW = "\033[0;33m"
-ANSI_WHITE = "\033[1;37m"
-ANSI_BOLD = "\033[1m"
-ANSI_RED = "\033[0;31m"
-
-
-class WrdlDictionary:
-    def __init__(self, length):
-        self.__length = int(length)
-
-        with open(
-            Path(__file__).parent.joinpath("dictionary.txt").resolve()
-        ) as wordfile:
-            self.__lexicon = list(
-                filter(
-                    None,
-                    set(self.validate(word, fail_silently=True) for word in wordfile),
-                )
-            )
-
-    @property
-    def length(self):
-        return self.__length
-
-    @property
-    def lexicon(self):
-        try:
-            return tuple(self.__lexicon)
-        except AttributeError:
-            return None
-
-    def validate(self, word, fail_silently=False):
-        word = str(word).upper().strip()
-
-        try:
-            if len(word) != self.length:
-                raise InvalidGuessLength()
-
-            if any(not char.isalpha() for char in word):
-                raise InvalidGuessChars()
-
-            if self.lexicon is not None and word not in self.lexicon:
-                raise InvalidGuess()
-        except InvalidGuess:
-            if fail_silently:
-                return None
-            else:
-                raise
-        else:
-            return word
-
-
-class WrdlSolver:
-    def __init__(self, length):
-        self.dictionary = WrdlDictionary(length)
-        self.__auto_guess_model = [string.ascii_uppercase] * self.dictionary.length
-        self.__letter_frequency = collections.Counter("".join(self.dictionary.lexicon))
-
-    def get_plausible_words(self, guessed_letters):
-        words = tuple(
-            word
-            for word in self.dictionary.lexicon
-            if all(
-                letter in self.__auto_guess_model[position]
-                for position, letter in enumerate(word)
-            )
-            and all(
-                misplaced_letter in word
-                for misplaced_letter in "".join(
-                    char
-                    for char in string.ascii_uppercase
-                    if guessed_letters.get(char) == -1
-                )
-            )
-        )
-        if not words:  # pragma: no cover
-            raise ImpossibleSolution()
-        else:
-            return words
-
-    def generate_guess(self, guessed_letters, random_guess=True, best_guess=False):
-        if random_guess and best_guess:
-            raise ValueError(
-                "random_guess and best_guess are mutually exclusive arguments"
-            )
-        elif random_guess:
-            return random.choice(self.get_plausible_words(guessed_letters))
-        elif best_guess:
-            return sorted(
-                self.get_plausible_words(guessed_letters),
-                key=self.grade_letter_probability,
-                reverse=True,
-            )[0]
-        else:
-            raise ValueError("one of modes 'random_guess' or 'best_guess' is required")
-
-    def grade_letter_probability(self, word):
-        return sum(self.__letter_frequency[char] for char in word)
-
-    def read_from_model(self, index):
-        return self.__auto_guess_model[int(index)]
-
-    def reveal_model(self):  # pragma: no cover
-        for position in range(self.dictionary.length):
-            print(f"{position}: {self.read_from_model(position)}")
-
-    def update_model(self, index, letter, evaluation):
-        index, letter, evaluation = int(index), str(letter), int(evaluation)
-        if evaluation == 1:
-            self.__auto_guess_model[index] = letter
-        else:
-            if evaluation == 0:
-                for index, _ in enumerate(self.__auto_guess_model):
-                    self.__auto_guess_model[index] = "".join(
-                        char for char in self.__auto_guess_model[index] if char != letter
-                    )
-            else:
-                self.__auto_guess_model[index] = "".join(
-                    char for char in self.__auto_guess_model[index] if char != letter
-                )
-
-
-class GuessChecker:
-    def __init__(self, length, force_starting_word=None):
-        self.dictionary = WrdlDictionary(length)
-        self.auto_solver = WrdlSolver(length)
-        self.reset(force_starting_word)
-
-    def evaluate(self, index=-1):
-        guess = self.__valid_guesses[int(index)]
-        evaluations = [None] * self.dictionary.length
-        guessed_letter_counts = collections.defaultdict(int)
-        letter_counts = collections.Counter(self.__secret_word)
-
-        for position, letter in enumerate(guess):
-            if self.__secret_word[position] == letter:
-                evaluation = 1
-            elif letter not in self.__secret_word:
-                evaluation = 0
-            else:
-                continue
-            evaluations[position] = evaluation
-            guessed_letter_counts[letter] += evaluation
-
-        for position, evaluation in enumerate(evaluations):
-            if evaluation is not None:
-                continue
-            guessed_letter = guess[position]
-            if guessed_letter_counts[guessed_letter] >= letter_counts[guessed_letter]:
-                evaluations[position] = 0
-            else:
-                evaluations[position] = -1
-            guessed_letter_counts[guessed_letter] += 1
-
-        position = 0
-        for letter, evaluation in zip(guess, evaluations):
-            self.__guessed_letters[letter] = evaluation
-            self.auto_solver.update_model(position, letter, evaluation)
-            yield evaluation
-            position += 1
-
-    @property
-    def guessed_letters(self):
-        return dict(self.__guessed_letters)
-
-    def reset(self, force_starting_word=None):
-        self.__secret_word = None
-        if force_starting_word is not None:
-            force_starting_word = force_starting_word.upper()
-            if force_starting_word in self.dictionary.lexicon:
-                self.__secret_word = force_starting_word
-        if self.__secret_word is None:
-            self.__secret_word = random.choice(self.dictionary.lexicon)
-        self.__guessed_letters = dict()
-        self.__valid_guesses = list()
-
-    def reveal_answer(self):  # pragma: no cover
-        print(f"Answer: {ANSI_BOLD}{ANSI_RED}{self.__secret_word}")
-
-    def validate(self, guess):
-        guess = self.dictionary.validate(guess)
-        if guess in self.__valid_guesses:
-            raise AlreadyGuessed()
-        self.__valid_guesses.append(guess)
-        return guess
-
-    @property
-    def valid_guesses(self):
-        return tuple(self.__valid_guesses)
-
-    @property
-    def win_message(self):  # pragma: no cover
-        match len(self.__valid_guesses):
-            case 0:
-                return "Unbelievable!"
-            case 1:
-                return "Genius!"
-            case 2:
-                return "Magnificent!"
-            case 3:
-                return "Impressive."
-            case 4:
-                return "Splendid."
-            case 5:
-                return "Great."
-            case 6:
-                return "Phew..."
+from wrdllib.ansi import ANSI
+from wrdllib.exceptions import (
+    AlreadyGuessed,
+    GameOver,
+    ImpossibleSolution,
+    InvalidGuess,
+    NoSuchDictionary,
+    OutOfGuesses,
+)
+from wrdllib.guesses import GuessChecker
 
 
 class Wrdl:
     MARKERS = {
-        -1: f" {ANSI_YELLOW}",
-        0: f" {ANSI_DARK_GRAY}",
-        1: f" {ANSI_GREEN}",
+        -1: f" {ANSI.YELLOW}",
+        0: f" {ANSI.DARK_GRAY}",
+        1: f" {ANSI.GREEN}",
         None: " ",
     }
 
     def __init__(self, length=5, max_guesses=6, force_starting_word=None, blind=False):
-        length = min(max(int(length), 2), 15)
         self.blind = bool(blind)
-        try:
-            self.dictionary = WrdlDictionary(length)
-        except OSError:  # pragma: no cover
-            raise NoSuchDictionary(f"No dictionary loaded for {length}-letter words.")
         self.__completed_games = 0
         self.__max_guesses = max(int(max_guesses), 1)
         self.__scores = list()
@@ -265,34 +56,36 @@ class Wrdl:
         os.system("clear")
         print(
             f"Playing Wrdl:\nYou have {self.max_guesses} guesses to find a "
-            f"{self.dictionary.length}-letter word.\n"
+            f"{self.auto_solver.dictionary.length}-letter word.\n"
         )
         for i, guess in enumerate(self.checker.valid_guesses):
-            print(ANSI_BOLD, end="")
+            print(ANSI.BOLD, end="")
             for grade, letter in zip(self.checker.evaluate(i), guess):
-                print(f"[{self.MARKERS[grade]}{letter}{ANSI_WHITE} ]", end="")
+                print(f"[{self.MARKERS[grade]}{letter}{ANSI.WHITE} ]", end="")
             print()
         for _ in range(self.max_guesses - len(self.checker.valid_guesses)):
-            print(ANSI_BOLD, end="")
-            print("[   ]" * self.dictionary.length)
+            print(ANSI.BOLD, end="")
+            print("[   ]" * self.auto_solver.dictionary.length)
         print()
         self.draw_keyboard()
 
     def draw_keyboard(self):  # pragma: no cover
         guessed_letters = self.checker.guessed_letters
         for i, row in enumerate(("QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM")):
-            print(ANSI_BOLD, end="")
+            print(ANSI.BOLD, end="")
             print(" " * 3 * i, end="")
             for letter in row:
                 marker = self.MARKERS[guessed_letters.get(letter)]
-                print(f"[{marker}{letter}{ANSI_WHITE} ]", end="")
+                print(f"[{marker}{letter}{ANSI.WHITE} ]", end="")
             print()
         print()
 
     def enter_guess(self, guess=None):
         try:
             if guess is None:  # pragma: no cover
-                guess = input(f"Enter a {self.dictionary.length}-letter guess: ")
+                guess = input(
+                    f"Enter a {self.auto_solver.dictionary.length}-letter guess: "
+                )
             guess = self.checker.validate(guess)
             print()
         except (AlreadyGuessed, InvalidGuess) as message:
@@ -354,7 +147,7 @@ class Wrdl:
         self.__completed_games += 1
         self.__scores.append(len(self.checker.valid_guesses))
         self.draw()
-        print(f"{ANSI_BOLD}{self.checker.win_message}")
+        print(f"{ANSI.BOLD}{self.checker.win_message}")
         self.stats()
 
     @property
@@ -378,7 +171,7 @@ class Wrdl:
     def solved(self):
         return (
             bool(self.checker.valid_guesses)
-            and sum(self.checker.evaluate()) == self.dictionary.length
+            and sum(self.checker.evaluate()) == self.auto_solver.dictionary.length
         )
 
     def stats(self):
