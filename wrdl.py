@@ -86,7 +86,7 @@ class WrdlSolver:
                 )
             )
         )
-        if not words:
+        if not words:  # pragma: no cover
             raise ImpossibleSolution()
         else:
             return words
@@ -113,7 +113,7 @@ class WrdlSolver:
     def read_from_model(self, index):
         return self.__auto_guess_model[int(index)]
 
-    def reveal_model(self):
+    def reveal_model(self):  # pragma: no cover
         for position in range(self.dictionary.length):
             print(f"{position}: {self.read_from_model(position)}")
 
@@ -187,7 +187,7 @@ class GuessChecker:
         self.__guessed_letters = dict()
         self.__valid_guesses = list()
 
-    def reveal_answer(self):
+    def reveal_answer(self):  # pragma: no cover
         print(f"Answer: {ANSI_BOLD}{ANSI_RED}{self.__secret_word}")
 
     def validate(self, guess):
@@ -202,7 +202,7 @@ class GuessChecker:
         return tuple(self.__valid_guesses)
 
     @property
-    def win_message(self):
+    def win_message(self):  # pragma: no cover
         match len(self.__valid_guesses):
             case 0:
                 return "Unbelievable!"
@@ -233,7 +233,7 @@ class Wrdl:
         self.blind = bool(blind)
         try:
             self.dictionary = WrdlDictionary(length)
-        except OSError:
+        except OSError:  # pragma: no cover
             raise NoSuchDictionary(f"No dictionary loaded for {length}-letter words.")
         self.__completed_games = 0
         self.__max_guesses = max(int(max_guesses), 1)
@@ -251,15 +251,15 @@ class Wrdl:
                     random_guess=random_guess,
                 )
             )
-        except ImpossibleSolution as e:
+        except ImpossibleSolution as e:  # pragma: no cover
             print(e)
             self.checker.reveal_answer()
             raise GameOver("Impossible Solution")
 
-    def demo(self):
+    def demo(self):  # pragma: no cover
         self.play(demo=True)
 
-    def draw(self):
+    def draw(self):  # pragma: no cover
         if self.blind:
             return
         os.system("clear")
@@ -278,7 +278,7 @@ class Wrdl:
         print()
         self.draw_keyboard()
 
-    def draw_keyboard(self):
+    def draw_keyboard(self):  # pragma: no cover
         guessed_letters = self.checker.guessed_letters
         for i, row in enumerate(("QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM")):
             print(ANSI_BOLD, end="")
@@ -291,14 +291,14 @@ class Wrdl:
 
     def enter_guess(self, guess=None):
         try:
-            if guess is None:
+            if guess is None:  # pragma: no cover
                 guess = input(f"Enter a {self.dictionary.length}-letter guess: ")
             guess = self.checker.validate(guess)
             print()
         except (AlreadyGuessed, InvalidGuess) as message:
             if self.blind:
                 raise
-            else:
+            else:  # pragma: no cover
                 print(message)
         except OutOfGuesses as message:
             self.you_lose(message)
@@ -310,7 +310,7 @@ class Wrdl:
         else:
             self.draw()
 
-    def play(self, demo=True, simulations=1):
+    def play(self, demo=True, simulations=1):  # pragma: no cover
         for iteration in range(simulations if demo else 1):
             if self.checker.valid_guesses:
                 self.checker.reset()
@@ -328,7 +328,7 @@ class Wrdl:
         if not demo:
             self.play_again()
 
-    def play_again(self):
+    def play_again(self):  # pragma: no cover
         again = input("Play again? (Y/n) - ").upper()
         if again == "N":
             print("Thanks for playing Wrdl!")
@@ -400,7 +400,7 @@ class Wrdl:
         return self.__streak
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     parser = argparse.ArgumentParser(
         prog="Wrdl",
         description="A small Wordle clone that can vary the board size somewhat.",

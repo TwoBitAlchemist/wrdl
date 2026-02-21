@@ -5,6 +5,7 @@ from wrdl import Wrdl
 from exceptions import (
     AlreadyGuessed,
     InvalidGuess,
+    InvalidGuessChars,
 )
 
 
@@ -52,6 +53,14 @@ def test_guess_handling():
         for i in range(5)
     )
 
+    with pytest.raises(InvalidGuessChars):
+        wordle.enter_guess("AAA!1")
+    assert len(wordle.checker.valid_guesses) == 0
+    assert all(
+        wordle.auto_solver.read_from_model(i) == string.ascii_uppercase
+        for i in range(5)
+    )
+
     wordle.enter_guess("THICK")
     wordle.checker.evaluate()
     assert len(wordle.checker.valid_guesses) == 1
@@ -88,3 +97,27 @@ def test_guess_handling():
         for letter in "THRW"
         for i in range(5)
     ), wordle.auto_solver.reveal_model()
+
+    wordle.enter_guess("OZONE")
+    assert len(wordle.checker.valid_guesses) == 2
+    assert (
+        wordle.auto_solver.read_from_model(2) == "O"
+    ), wordle.auto_solver.reveal_model()
+    assert (
+        wordle.auto_solver.read_from_model(3) == "O"
+    ), wordle.auto_solver.reveal_model()
+    assert (
+        "O" not in wordle.auto_solver.read_from_model(0)
+    ), wordle.auto_solver.reveal_model()
+    assert all(
+        letter not in wordle.auto_solver.read_from_model(i)
+        for letter in "ZE"
+        for i in range(5)
+    ), wordle.auto_solver.reveal_model()
+
+
+def test_auto_solver():
+    wordle = Wrdl(blind=True)
+    wordle.auto_guess()
+    assert len(wordle.checker.valid_guesses) == 1
+    assert len(wordle.auto_solver.get_plausible_words(wordle.checker.guessed_letters)) > 0
