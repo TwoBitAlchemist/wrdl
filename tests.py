@@ -122,7 +122,6 @@ def test_guess_handling():
     ), wordle.auto_solver.reveal_model()
 
 
-@pytest.mark.xfail
 def test_auto_solver():
     wordle = Wrdl(blind=True)
     wordle.auto_guess()

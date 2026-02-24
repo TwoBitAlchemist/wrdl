@@ -134,9 +134,7 @@ class Wrdl:
         raise GameOver(message)
 
     def you_quit(self):
-        message = "Game ended prematurely. Thanks for playing!"
-        print()
-        print(message)
+        message = "\nThe game was terminated early."
         self.__streak = 0
         raise GameOver(message)
 

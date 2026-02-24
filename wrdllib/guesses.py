@@ -1,6 +1,8 @@
 import collections
+from pathlib import Path
 import random
 import string
+import time
 
 from .dictionary import WrdlDictionary
 from .exceptions import AlreadyGuessed, ImpossibleSolution, NoSuchDictionary
@@ -53,22 +55,11 @@ class WrdlSolver:
         else:
             raise ValueError("one of modes 'random_guess' or 'best_guess' is required")
 
-    @classmethod
-    def optimize_dictionary(cls, length):
-        def grade_guess(guess):
-            return sum(
-                GuessChecker.evaluate_single_guess(str(guess), possible_secret_word)
-                for possible_secret_word in dictionary.lexicon
-            )
-
-        dictionary = WrdlDictionary(length)
-        with open(f"optimized_dictionary_{length}.txt") as wordbank:
-            for word in sorted(
-                self.get_plausible_words(dict()),
-                key=grade_guess,
-                reverse=True,
-            ):
-                wordbank.write(f"{word}\n")
+    def grade_guess(self, guess):
+        return sum(
+            self.dictionary.letter_counts[position][guess[position]]
+            for position in range(self.dictionary.length)
+        )
 
     def read_from_model(self, index):
         return self.__auto_guess_model[int(index)]
@@ -99,13 +90,6 @@ class GuessChecker:
     def __init__(self, length, force_starting_word=None):
         self.auto_solver = WrdlSolver(length)
         self.reset(force_starting_word)
-
-    @classmethod
-    def evaluate_single_guess(cls, guess, secret_word):
-        guess, secret_word = map(str, (guess, secret_word))
-        checker = cls(len(secret_word), force_starting_word=secret_word)
-        checker.validate(guess)
-        return sum(checker.evaluate())
 
     def evaluate(self, index=-1):
         guess = self.__valid_guesses[int(index)]

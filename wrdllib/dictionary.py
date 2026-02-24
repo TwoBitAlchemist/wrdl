@@ -1,3 +1,4 @@
+import collections
 from pathlib import Path
 
 from .exceptions import (
@@ -20,6 +21,11 @@ class WrdlDictionary:
                     set(self.validate(word, fail_silently=True) for word in wordfile),
                 )
             )
+
+        self.letter_counts = tuple(
+            collections.Counter(word[position] for word in self.lexicon)
+            for position in range(self.length)
+        )
 
     @property
     def length(self):
