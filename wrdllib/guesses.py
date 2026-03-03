@@ -4,6 +4,7 @@ import random
 import string
 import time
 
+from .ansi import ANSI
 from .dictionary import WrdlDictionary
 from .exceptions import AlreadyGuessed, ImpossibleSolution, NoSuchDictionary
 
